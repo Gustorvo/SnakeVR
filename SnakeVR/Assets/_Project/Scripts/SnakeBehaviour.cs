@@ -137,7 +137,7 @@ namespace Gustorvo.SnakeVR
         public Vector3 HeadDirection => Head.Transform.forward;
         public Vector3 DirectionLocal => Head.Transform.InverseTransformDirection(HeadDirection);
 
-        public SnakeBody tail;
+        private SnakeBody tail;
 
         public SnakeBody Tail
         {
@@ -145,7 +145,7 @@ namespace Gustorvo.SnakeVR
             set { tail = value; }
         }
 
-        public SnakeBody head;
+        private SnakeBody head;
 
         public SnakeBody Head
         {
