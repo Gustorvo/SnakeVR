@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -16,7 +17,7 @@ namespace Gustorvo.SnakeVR
 
         [SerializeField] private SnakeBehaviour snakeBehaviour;
         [SerializeField] private SnakeTarget snakeTargetBehaviour;
-        [SerializeField] Coroutine snakeMoveCoroutine;
+        private Coroutine snakeMoveCoroutine;
 
         private Vector3 snakeCurrentPosition;
         private const int maxMovesPerSecond = 90;
@@ -26,12 +27,25 @@ namespace Gustorvo.SnakeVR
         private void Awake()
         {
             Init();
+            RoomManager.OnRoomBoundsSet += StartSnake;
+        }
+
+        private void OnDestroy()
+        {
+            RoomManager.OnRoomBoundsSet -= StartSnake;
         }
 
 
-        private void Start()
+        [Button]
+        public void StartSnake(Bounds _)
         {
             Assert.IsNotNull(snakeBehaviour, "SnakeMoverBehaviour is not set");
+            if (snakeBehaviour != null)
+            {
+                snakeBehaviour = null;
+                StopAllCoroutines();
+            }
+
             snakeMoveCoroutine = StartCoroutine(MoveSnake());
         }
 
@@ -67,6 +81,7 @@ namespace Gustorvo.SnakeVR
 
         IEnumerator MoveSnake()
         {
+            yield return null;
             bool canMove = true;
             while (canMove)
             {

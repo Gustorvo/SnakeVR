@@ -25,8 +25,7 @@ namespace Gustorvo.SnakeVR
     {
         [SerializeField] private bool drawGizmos = false;
         [SerializeField] private SnakeBody snakeBodyPrefab;
-        [SerializeField] SnakeBody headPointer;
-        [SerializeField] SnakeBody tailPointer;
+
         public List<SnakeBody> snakeParts = new();
         public IPositioner Positioner { get; private set; } = new AIPositioner();
 
@@ -37,42 +36,23 @@ namespace Gustorvo.SnakeVR
         private bool targetValid => Target != null && Target.Transform != null;
 
         public bool HasReachedTarget =>
-            targetValid && (distanceToTarget - Core.CellSize) <= Core.DistanceTolerance;
+            targetValid && (distanceToTarget - SnakeCore.CellSize) <= SnakeCore.DistanceTolerance;
 
 
         private List<Vector3> nextPositions = new List<Vector3>();
         private static SnakeBehaviour instance { get; set; }
 
 
-        private void Awake()
-        {
-            Init();
-            // AlignToGrid();
-        }
-
-        private void Update()
-        {
-            nextPositions = Positioner.GetMovePositions().ToList();
-        }
-
-
         public void Init()
         {
             instance = this;
-
             snakeParts.Clear();
-            foreach (Transform child in transform)
-            {
-                if (!child.TryGetComponent(out SnakeBody body))
-                {
-                    body = child.gameObject.AddComponent<SnakeBody>();
-                }
 
-                snakeParts.Add(body);
-            }
+            Head = InstantiateSnakeBody(SnakeCore.Grid.GetRandomPosition());
+            Tail = InstantiateSnakeBody(Head.Position - Vector3.forward * SnakeCore.CellSize);
 
-            Head = headPointer;
-            Tail = tailPointer;
+            snakeParts.Add(head);
+            snakeParts.Add(tail);
         }
 
         public bool IsSnakePosition(Vector3 newPos) => Positions.Any(p => p.AlmostEquals(newPos, 0.0001f));
@@ -80,9 +60,7 @@ namespace Gustorvo.SnakeVR
 
         private void TakeTarget()
         {
-            SnakeBody newHead =
-                Instantiate(snakeBodyPrefab, parent: transform, position: Target.Position,
-                    rotation: Quaternion.identity);
+            SnakeBody newHead = InstantiateSnakeBody(Target.Position);
             Target.Reposition();
             snakeParts.Insert(headIndex, newHead);
 
@@ -90,6 +68,9 @@ namespace Gustorvo.SnakeVR
             Head = newHead;
             Head.ApplyHeadMaterial();
         }
+
+        private SnakeBody InstantiateSnakeBody(Vector3 position) => Instantiate(snakeBodyPrefab, parent: transform,
+            position: position, rotation: Quaternion.identity);
 
         public void Move()
         {
@@ -160,7 +141,7 @@ namespace Gustorvo.SnakeVR
             Init();
             for (int i = 0; i < snakeParts.Count; i++)
             {
-                Vector3 nearestPositionInGrid = Core.PlayBoundary.GetNearestPositionInGrid(snakeParts[i].PositionLocal);
+                Vector3 nearestPositionInGrid = SnakeCore.Grid.GetNearestPositionInGrid(snakeParts[i].PositionLocal);
                 snakeParts[i].MoveToLocal(nearestPositionInGrid);
             }
         }
@@ -169,6 +150,7 @@ namespace Gustorvo.SnakeVR
         {
             if (!drawGizmos) return;
             // draw possible next positions
+            nextPositions = Positioner.GetMovePositions().ToList();
             for (int i = 0; i < nextPositions.Count; i++)
             {
                 Vector3 pos = nextPositions[i];
@@ -181,7 +163,7 @@ namespace Gustorvo.SnakeVR
                     Gizmos.color = Color.magenta;
                     Debug.LogError("Snake position: " + pos);
                 }
-                else if (!Core.PlayBoundary.IsPositionInBounds(pos))
+                else if (!SnakeCore.Grid.IsPositionInBounds(pos))
                 {
                     Gizmos.color = Color.red;
                     Debug.LogError("Position out of bounds: " + pos);
@@ -193,7 +175,7 @@ namespace Gustorvo.SnakeVR
                 }
 
                 // draw a green sphere at the position
-                Gizmos.DrawWireSphere(pos, Core.CellSize * 0.5f);
+                Gizmos.DrawWireSphere(pos, SnakeCore.CellSize * 0.5f);
             }
 
 

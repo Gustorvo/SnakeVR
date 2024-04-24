@@ -17,6 +17,7 @@ namespace Gustorvo.SnakeVR
         private void Init()
         {
             renderer = transform.GetComponentInChildren<Renderer>();
+            transform.localRotation = Quaternion.identity;
         }
 
         private void Awake()

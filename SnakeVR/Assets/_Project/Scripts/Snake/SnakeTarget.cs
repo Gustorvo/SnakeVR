@@ -26,10 +26,14 @@ namespace Gustorvo.SnakeVR
         [Button]
         public void Reposition()
         {
-            var snakePositions = Core.Snake.Positions;
-            if (Core.PlayBoundary.TryGetRandomPositionExcluding(snakePositions, out var randomPosition))
+            var snakePositions = SnakeCore.Snake.Positions;
+            if (SnakeCore.Grid.TryGetRandomPositionExcluding(snakePositions, out var randomPosition))
             {
                 transform.position = randomPosition;
+            }
+            else
+            {
+                Debug.LogError("Failed to get random position");
             }
         }
         [Button]
@@ -37,7 +41,7 @@ namespace Gustorvo.SnakeVR
         {
             // get local position in grid
           //  var posLocal = transform.InverseTransformPoint(Position);
-            transform.localPosition = Core.PlayBoundary.GetNearestPositionInGrid(transform.localPosition);
+            transform.localPosition = SnakeCore.Grid.GetNearestPositionInGrid(transform.localPosition);
         }
     }
 }

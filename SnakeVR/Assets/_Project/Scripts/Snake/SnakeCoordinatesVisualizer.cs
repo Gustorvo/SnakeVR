@@ -10,8 +10,8 @@ namespace Gustorvo.SnakeVR
         [SerializeField] private Transform xPoint0, xPoint1, yPoint0, yPoint1, zPoint0, zPoint1;
         [SerializeField] private Transform xLine, zLine, yLine;
 
-        private PlayBoundary boundary => Core.PlayBoundary;
-        private Vector3 snakePosition => Core.Snake.Head.PositionLocal;
+        private RoomBoundary boundary => SnakeCore.Grid;
+        private Vector3 snakePosition => SnakeCore.Snake.Head.PositionLocal;
 
         private void Start()
         {

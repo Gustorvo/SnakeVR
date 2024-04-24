@@ -16,9 +16,9 @@ namespace Gustorvo.SnakeVR
 
     public class Positioner : IPositioner
     {
-        private PlayBoundary boundary => Core.PlayBoundary;
-        private SnakeBehaviour snake => Core.Snake;
-        private float moveStep => Core.CellSize;
+        private RoomBoundary grid => SnakeCore.Grid;
+        private SnakeBehaviour snake => SnakeCore.Snake;
+        private float moveStep => SnakeCore.CellSize;
 
 
         public bool TryGetMovePosition(out Vector3 movePosition)
@@ -37,8 +37,9 @@ namespace Gustorvo.SnakeVR
         public bool IsPositionValid(Vector3 newPos)
         {
             return
-                boundary.IsPositionInBounds(newPos)
+                grid.IsPositionInBounds(newPos)
                 && !snake.IsSnakePosition(newPos);
+                
         }
 
         #region Not implemented
@@ -55,8 +56,8 @@ namespace Gustorvo.SnakeVR
     public class AIPositioner : IPositioner
     {
         private IPositioner positioner = new Positioner();
-        PlayBoundary boundary => Core.PlayBoundary;
-        ISnake snake => Core.Snake;
+        RoomBoundary boundary => SnakeCore.Grid;
+        ISnake snake => SnakeCore.Snake;
 
 
         public Vector3 GetPositionInDirection(Vector3 direction) =>
@@ -75,8 +76,8 @@ namespace Gustorvo.SnakeVR
         public IEnumerable<Vector3> GetMovePositions()
         {
             // Apply world rotation of Play boundary
-            var rotation = Core.PlayBoundary.transform.rotation;
-            var moveDirections = Core.MoveDirections.Select(direction => rotation * direction);
+            var rotation = SnakeCore.Grid.transform.rotation;
+            var moveDirections = SnakeCore.MoveDirections.Select(direction => rotation * direction);
 
             // Get positions for each direction
             var positions = moveDirections.Select(direction => GetPositionInDirection(direction));

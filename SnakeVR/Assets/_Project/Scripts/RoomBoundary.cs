@@ -7,18 +7,17 @@ using Random = UnityEngine.Random;
 
 namespace Gustorvo.SnakeVR
 {
-    public class PlayBoundary : MonoBehaviour
+    public class RoomBoundary : MonoBehaviour
     {
         [SerializeField] bool drawGizmos;
         [SerializeField] private Transform debugCube;
+        [SerializeField] LayerMask wallLayer;
+        [SerializeField] LayerMask furnitureLayer;
+
+        public event Action OnBoundaryReady;
 
 
         private ReadOnlyCollection<Vector3> readOnlyCellArray;
-        public Vector3 Forward => transform.forward;
-        public Vector3 Right => transform.right;
-        public Vector3 Up => transform.up;
-        public Vector3 Position => transform.position;
-        public Quaternion Rotation => transform.rotation;
 
 
         public ReadOnlyCollection<Vector3> CellPositions
@@ -37,31 +36,47 @@ namespace Gustorvo.SnakeVR
 
         private void Awake()
         {
-            BuildGridOfCellsWithinBounds();
+            RoomManager.OnRoomBoundsSet += Init;
         }
 
-        [SerializeField, Range(0.2f, 2)] private float boxSize = 1f;
-        [ShowNativeProperty] Bounds gameBounds => new Bounds(Vector3.zero, Vector3.one * boxSize);
-        [ShowNativeProperty] int itemsInRow => Mathf.CeilToInt(gameBounds.size.x / cellSize);
+        private void OnDestroy()
+        {
+            RoomManager.OnRoomBoundsSet -= Init;
+        }
 
-        [ShowNativeProperty] private float cellSize => Core.CellSize;
-        public Bounds bounds => gameBounds;
+        private void Init(Bounds bounds)
+        {
+            this.bounds = bounds;
+            BuildGridOfCellsWithinBounds();
+            OnBoundaryReady?.Invoke();
+        }
+
+        [ShowNativeProperty] int itemsInRow => Mathf.CeilToInt(bounds.size.x / cellSize);
+
+        [ShowNativeProperty] private float cellSize => SnakeCore.CellSize;
+        public Bounds bounds { get; private set; }
 
         private ReadOnlyCollection<Vector3> BuildGridOfCellsWithinBounds()
         {
-            float halfCellSize = cellSize / 2;
+            float halfCellSize = cellSize / 2f;
             Vector3 offset = new Vector3(halfCellSize, halfCellSize, halfCellSize);
-            int totalItemsInBoundingBox = itemsInRow * itemsInRow * itemsInRow;
+
+            int itemsInRow = Mathf.CeilToInt(bounds.size.x / cellSize);
+            int itemsInColumn = Mathf.CeilToInt(bounds.size.y / cellSize);
+            int itemsInDepth = Mathf.CeilToInt(bounds.size.z / cellSize);
+
+            int totalItemsInBoundingBox = itemsInRow * itemsInColumn * itemsInDepth;
             Vector3[] cellArray = new Vector3[totalItemsInBoundingBox];
+
             for (int i = 0; i < totalItemsInBoundingBox; i++)
             {
-                int j = i % itemsInRow;
-                int k = (i / itemsInRow) % itemsInRow;
-                int l = i / (itemsInRow * itemsInRow);
+                int xIndex = i % itemsInRow;
+                int yIndex = (i / itemsInRow) % itemsInColumn;
+                int zIndex = i / (itemsInRow * itemsInColumn);
 
-                float x = gameBounds.min.x + cellSize * j;
-                float y = gameBounds.min.y + cellSize * k;
-                float z = gameBounds.min.z + cellSize * l;
+                float x = bounds.min.x + cellSize * xIndex;
+                float y = bounds.min.y + cellSize * yIndex;
+                float z = bounds.min.z + cellSize * zIndex;
 
                 cellArray[i] = new Vector3(x, y, z) + offset;
             }
@@ -69,25 +84,11 @@ namespace Gustorvo.SnakeVR
             return Array.AsReadOnly(cellArray);
         }
 
-        [Button]
-        void InstantiateCubesInCellPositions()
-        {
-            GameObject debugCubeParent = new GameObject("DebugCubesParent");
-            for (int i = 0; i < CellPositions.Count; i++)
-            {
-                Instantiate(debugCube, position: CellPositions[i], rotation: Quaternion.identity,
-                    parent: debugCubeParent.transform).localScale = Vector3.one * cellSize;
-            }
-
-            var pos = Core.PlayBoundary.transform.position;
-            var rot = Core.PlayBoundary.transform.rotation;
-            debugCubeParent.transform.SetPositionAndRotation(pos, rot);
-        }
-
         public bool TryGetRandomPositionExcluding(Vector3[] excludePositions, out Vector3 randomPosition)
         {
-            randomPosition = Vector3.zero;
-            Vector3 tempPosition = Vector3.zero;
+            var random = GetRandomPosition();
+            ;
+            randomPosition = random;
 
             if (excludePositions.Length >= CellPositions.Count)
             {
@@ -96,41 +97,33 @@ namespace Gustorvo.SnakeVR
             }
 
             int i = 0;
-            do
-            {
-                i++;
 
-                int randomIndex = Random.Range(0, CellPositions.Count());
-                tempPosition = CellPositions[randomIndex];
-                tempPosition = transform.TransformPoint(tempPosition);
-            } while (excludePositions.Any(x => x.AlmostEquals(tempPosition, 0.0001f)) && i < 100);
+            while (excludePositions.Any(x => x.AlmostEquals(random, 0.0001f)) && i++ < 1000)
+                random = transform.TransformPoint(GetRandomPosition());
+            randomPosition = random;
 
 
-            if (i >= 100)
+            if (i >= 1000)
             {
                 Debug.LogError("Failed to get random position");
                 return false;
             }
 
-            randomPosition = tempPosition;
-            // PrintSomeDebug();
-
-
             return true;
-
-            // void PrintSomeDebug()
-            // {
-            //     // find the number of all items in cell array that are almost equal to excludePositions array
-            //     int count = CellPositions.Count(cell =>
-            //         excludePositions.Any(excludePosition => excludePosition.AlmostEquals(cell, 0.0001f)));
-            //     Debug.Log($"Number of items in cell array that are almost equal to excludePositions array: {count}");
-            // }
         }
 
         public bool IsPositionInBounds(Vector3 position)
         {
             position = transform.InverseTransformPoint(position);
-            return gameBounds.Contains(position);
+            return bounds.Contains(position) && !IsInsideFurniture(position);
+        }
+
+        public bool IsInsideFurniture(Vector3 position)
+        {
+            bool isInFurniture = Physics.CheckBox(position, Vector3.one * (SnakeCore.CellSize * 05f),
+                transform.rotation, furnitureLayer);
+            bool isBelowFurniture = Physics.Raycast(position, Vector3.up, Mathf.Infinity, furnitureLayer);
+            return isInFurniture || isBelowFurniture;
         }
 
         public Vector3 GetNearestPositionInGrid(Vector3 position)
@@ -177,11 +170,36 @@ namespace Gustorvo.SnakeVR
             // Apply the object's rotation and position to the Gizmos.matrix
             Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one);
 
+            foreach (var cell in CellPositions)
+            {
+                Gizmos.DrawWireCube(cell, cellSize * Vector3.one);
+            }
+
             // draw the bounds
-            Gizmos.DrawWireCube(gameBounds.center, gameBounds.size);
+            Gizmos.DrawWireCube(bounds.center, bounds.size);
 
             // Revert back to the original matrix
             Gizmos.matrix = originalMatrix;
+        }
+
+        public Vector3 GetRandomPosition()
+        {
+            int maxIter = 0;
+            int randomIndex = Random.Range(0, CellPositions.Count());
+            Vector3 newPosition = transform.TransformPoint(CellPositions[randomIndex]);
+            while (IsInsideFurniture(newPosition) && maxIter++ < 1000)
+            {
+                randomIndex = Random.Range(0, CellPositions.Count());
+                newPosition = transform.TransformPoint(CellPositions[randomIndex]);
+            }
+
+            if (IsInsideFurniture(newPosition))
+            {
+                Debug.LogError("Failed to get random position");
+                return Vector3.zero;
+            }
+
+            return newPosition;
         }
     }
 }
