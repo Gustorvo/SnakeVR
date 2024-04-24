@@ -27,7 +27,7 @@ namespace Gustorvo.SnakeVR
         [SerializeField] private SnakeBody snakeBodyPrefab;
 
         public List<SnakeBody> snakeParts = new();
-        public IPositioner Positioner { get; private set; } = new AIPositioner();
+        public IPositioner Positioner { get; private set; } = new Positioner();
 
         public bool CanMove { get; private set; } = true;
         public ITarget Target { get; set; }
