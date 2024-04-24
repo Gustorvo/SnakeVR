@@ -1,10 +1,10 @@
 {
   "dependencies": {
-    "com.gustorvo.tools": "file:C:/Users/mumia/Documents/Unity Packages/Tools",
     "com.dbrizov.naughtyattributes": "https://github.com/dbrizov/NaughtyAttributes.git#upm",
+    "com.gustorvo.tools": "file:C:/Users/mumia/Documents/Unity Packages/Tools",
     "com.meta.xr.sdk.all": "64.0.0",
+    "com.meta.xr.sdk.interaction.ovr.samples": "64.0.0",
     "com.unity.ide.rider": "3.0.28",
-    "com.unity.render-pipelines.universal": "14.0.10",
     "com.unity.textmeshpro": "3.0.8",
     "com.unity.ugui": "1.0.0",
     "com.unity.xr.management": "4.4.1",
